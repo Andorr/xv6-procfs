@@ -103,7 +103,10 @@ void            wakeup(void*);
 void            yield(void);
 int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
+void            proc_ptable_pids(int pids[64]);
+struct proc     proc_by_id(int pid);
 void            procdump(void);
+
 
 // swtch.S
 void            swtch(struct context*, struct context*);
@@ -138,6 +141,14 @@ int             argaddr(int, uint64 *);
 int             fetchstr(uint64, char*, int);
 int             fetchaddr(uint64, uint64*);
 void            syscall();
+
+// sysfile.c
+struct inode*
+create(char *path, short type, short major, short minor);
+uint64 unlink(char path[128]);
+
+// procfs.c
+void            procfsinit();
 
 // trap.c
 extern uint     ticks;
@@ -181,6 +192,9 @@ void            plic_complete(int);
 void            virtio_disk_init(void);
 void            virtio_disk_rw(struct buf *, int);
 void            virtio_disk_intr(void);
+
+// utils.c
+char* itoa(int value, char* buffer, int base);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

@@ -16,8 +16,11 @@ main(void)
 {
   int pid, wpid;
 
+  mknod("proc", T_DIR, PROCFS_PROC, 0);
+  // mkdir("proc");
+
   if(open("console", O_RDWR) < 0){
-    mknod("console", CONSOLE, 0);
+    mknod("console", T_DEVICE, CONSOLE, 0);
     open("console", O_RDWR);
   }
   dup(0);  // stdout

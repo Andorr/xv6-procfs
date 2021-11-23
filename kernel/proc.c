@@ -5,6 +5,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "stat.h"
 
 struct cpu cpus[NCPU];
 
@@ -314,6 +315,9 @@ fork(void)
   acquire(&np->lock);
   np->state = RUNNABLE;
   release(&np->lock);
+
+  
+//  create("proc/asdf", T_DIR, 0, 0);  
 
   return pid;
 }
@@ -625,6 +629,32 @@ either_copyin(void *dst, int user_src, uint64 src, uint64 len)
     return 0;
   }
 }
+
+void proc_ptable_pids(int pids[NPROC])
+{
+  struct proc *p;
+  int i = 0;
+
+  for(p = proc; p < &proc[NPROC]; p++)
+  {
+    if (p && (p->state != UNUSED) && (p->state != ZOMBIE)) 
+    {
+      pids[i] =  p->pid;
+      i++;
+    }
+  }
+
+  pids[i] = -1;
+}
+
+struct proc proc_by_id(int pid)
+{
+  struct proc copy;
+  memmove(&copy, &proc[pid], sizeof(struct proc));
+  // struct proc process = proc[pid];
+  return copy;
+}
+
 
 // Print a process listing to console.  For debugging.
 // Runs when user types ^P on console.

@@ -31,10 +31,14 @@ struct inode {
 
 // map major device number to device functions.
 struct devsw {
-  int (*read)(int, uint64, int);
-  int (*write)(int, uint64, int);
+  int (*read)(struct file *f, uint64, int);
+  int (*write)(struct file *f, uint64, int);
 };
 
 extern struct devsw devsw[];
 
+// major device numbers
 #define CONSOLE 1
+#define PROCFS_PROC 2
+#define PROCFS_PID 3
+#define PROCFS_FILE 4

@@ -181,16 +181,12 @@ isdirempty(struct inode *dp)
   return 1;
 }
 
-uint64
-sys_unlink(void)
+uint64 unlink(char path[MAXPATH])
 {
   struct inode *ip, *dp;
   struct dirent de;
-  char name[DIRSIZ], path[MAXPATH];
+  char name[DIRSIZ];
   uint off;
-
-  if(argstr(0, path, MAXPATH) < 0)
-    return -1;
 
   begin_op();
   if((dp = nameiparent(path, name)) == 0){
@@ -238,9 +234,22 @@ bad:
   return -1;
 }
 
-static struct inode*
+uint64
+sys_unlink(void)
+{
+  char path[MAXPATH];
+
+  if(argstr(0, path, MAXPATH) < 0)
+    return -1;
+
+  return unlink(path);
+}
+
+struct inode*
 create(char *path, short type, short major, short minor)
 {
+  // printf("[create]\nPath: %s\nType :%d\nMajor: %d\nMinor: %d\n", path, type, major, minor);
+
   struct inode *ip, *dp;
   char name[DIRSIZ];
 
@@ -271,9 +280,11 @@ create(char *path, short type, short major, short minor)
     dp->nlink++;  // for ".."
     iupdate(dp);
     // No ip->nlink++ for ".": avoid cyclic ref count.
+
     if(dirlink(ip, ".", ip->inum) < 0 || dirlink(ip, "..", dp->inum) < 0)
       panic("create dots");
   }
+
 
   if(dirlink(dp, name, ip->inum) < 0)
     panic("create: dirlink");
@@ -372,13 +383,14 @@ sys_mknod(void)
 {
   struct inode *ip;
   char path[MAXPATH];
-  int major, minor;
+  int type, major, minor;
 
   begin_op();
   if((argstr(0, path, MAXPATH)) < 0 ||
-     argint(1, &major) < 0 ||
-     argint(2, &minor) < 0 ||
-     (ip = create(path, T_DEVICE, major, minor)) == 0){
+     argint(1, &type) < 0 ||
+     argint(2, &major) < 0 ||
+     argint(3, &minor) < 0 ||
+     (ip = create(path, type, major, minor)) == 0) {
     end_op();
     return -1;
   }

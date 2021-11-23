@@ -13,6 +13,7 @@
 #include "stat.h"
 #include "proc.h"
 
+
 struct devsw devsw[NDEV];
 struct {
   struct spinlock lock;
@@ -108,6 +109,7 @@ fileread(struct file *f, uint64 addr, int n)
 {
   int r = 0;
 
+
   if(f->readable == 0)
     return -1;
 
@@ -116,8 +118,12 @@ fileread(struct file *f, uint64 addr, int n)
   } else if(f->type == FD_DEVICE){
     if(f->major < 0 || f->major >= NDEV || !devsw[f->major].read)
       return -1;
-    r = devsw[f->major].read(1, addr, n);
-  } else if(f->type == FD_INODE){
+    r = devsw[f->major].read(f, addr, n);
+  } 
+  else if(f->type == FD_INODE && f->ip->major >= PROCFS_PROC && f->ip->major <= PROCFS_FILE && devsw[f->ip->major].read) {
+    r = devsw[f->ip->major].read(f, addr, n);
+  }  
+  else if(f->type == FD_INODE){
     ilock(f->ip);
     if((r = readi(f->ip, 1, addr, f->off, n)) > 0)
       f->off += r;
@@ -144,7 +150,7 @@ filewrite(struct file *f, uint64 addr, int n)
   } else if(f->type == FD_DEVICE){
     if(f->major < 0 || f->major >= NDEV || !devsw[f->major].write)
       return -1;
-    ret = devsw[f->major].write(1, addr, n);
+    ret = devsw[f->major].write(f, addr, n);
   } else if(f->type == FD_INODE){
     // write a few blocks at a time to avoid exceeding
     // the maximum log transaction size, including

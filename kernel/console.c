@@ -56,9 +56,10 @@ struct {
 // user write()s to the console go here.
 //
 int
-consolewrite(int user_src, uint64 src, int n)
+consolewrite(struct file *f, uint64 src, int n)
 {
   int i;
+  int user_src = 1;
 
   for(i = 0; i < n; i++){
     char c;
@@ -77,9 +78,10 @@ consolewrite(int user_src, uint64 src, int n)
 // or kernel address.
 //
 int
-consoleread(int user_dst, uint64 dst, int n)
+consoleread(struct file *f, uint64 dst, int n)
 {
   uint target;
+  int user_dst = 1;
   int c;
   char cbuf;
 
