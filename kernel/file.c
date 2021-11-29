@@ -113,6 +113,7 @@ fileread(struct file *f, uint64 addr, int n)
   if(f->readable == 0)
     return -1;
 
+  // printf("[fileread]: TYPE: %d; DEVICE: Major: %d\n",f->type, f->major);
   if(f->type == FD_PIPE){
     r = piperead(f->pipe, addr, n);
   } else if(f->type == FD_DEVICE){
@@ -120,9 +121,9 @@ fileread(struct file *f, uint64 addr, int n)
       return -1;
     r = devsw[f->major].read(f, addr, n);
   } 
-  else if(f->type == FD_INODE && f->ip->major >= PROCFS_PROC && f->ip->major <= PROCFS_FILE && devsw[f->ip->major].read) {
-    r = devsw[f->ip->major].read(f, addr, n);
-  }  
+  // else if(f->type == FD_INODE && f->ip->major >= PROCFS_PROC && f->ip->major <= PROCFS_FILE && devsw[f->ip->major].read) {
+  //   r = devsw[f->ip->major].read(f, addr, n);
+  // }  
   else if(f->type == FD_INODE){
     ilock(f->ip);
     if((r = readi(f->ip, 1, addr, f->off, n)) > 0)

@@ -103,7 +103,6 @@ void            wakeup(void*);
 void            yield(void);
 int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
-void            proc_ptable_pids(int pids[64]);
 struct proc     proc_by_id(int pid);
 void            procdump(void);
 
@@ -149,6 +148,8 @@ uint64 unlink(char path[128]);
 
 // procfs.c
 void            procfsinit();
+void build_pid_directory(struct proc *p);
+uint64 remove_pid_directory(struct proc *p);
 
 // trap.c
 extern uint     ticks;

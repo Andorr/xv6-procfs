@@ -9,8 +9,6 @@
 #include "stat.h"
 #include "proc.h"
 
-int pid_exists[NPROC] = { 0 };
-
 int
 atoi(const char *s)
 {
@@ -22,73 +20,78 @@ atoi(const char *s)
   return n;
 }
 
-void build_proc_path(int value, char path[MAXPATH]) {
+uint64 build_proc_path(int value, char path[MAXPATH]) {
   char buff[36];
   char* tmp = "/proc/";
   for(int i = 0; i < 6; i++) {
     path[i] = tmp[i];
   }
   char *pid = itoa(value, buff, 10);
+  int length = MAXPATH;
   for(int j = 0; j < 4; j++) {
     path[6 + j] = pid[j];
+    if(pid[j] == '\0') {
+      length = 6 + j;
+      break;
+    }
   }
+  return length;
 }
 
-
-int procfs_proc_read(struct file *f, uint64 dst, int n) {
+void build_pid_directory(struct proc *p) {
   char path[MAXPATH];
-  char* files[1] = { "/status" }; 
+  int path_length = build_proc_path(p->pid, path);
 
-  int i = 0;
-  int pids[NPROC];
-  struct inode *p;
-  proc_ptable_pids(pids);
-  begin_op();
-  while(pids[i] != -1) {
+  struct inode *in;
 
-    if(pid_exists[pids[i]] != 0) {
-      i++;
-      continue;
-    }
-
-    // Create directory
-    build_proc_path(pids[i], path);
-    p = create(path, T_DIR, PROCFS_PID, 0);
-    if(p != 0) {
-      iunlockput(p);
-    }
-
-    // Create status files
-    memmove((void*)&path[7], files[0], 7); // Append /status to the path
-    create(path, T_DEVICE, PROCFS_FILE, pids[i]);
-
-    pid_exists[pids[i]] = 1;
-    i++;
+  // Create directory
+  in = create(path, T_DIR, 0, 0);
+  if(in) {
+    iunlockput(in);
   }
-  end_op();
-  
-  int r = 0;
-  ilock(f->ip);
-  if((r = readi(f->ip, 1, dst, f->off, n)) > 0)
-    f->off += r;
-  iunlock(f->ip);
 
-  return r;
+  // Create status file
+  memmove((void*)&path[path_length], "/status", 7); // Append /status to the path
+  in = create(path, T_DEVICE, PROCFS_STATUS, p->pid);
+  if(in) {
+    iunlockput(in);
+  }
+
+  // Create status file
+  memmove((void*)&path[path_length], "/name", 7); // Append /name to the path
+  in = create(path, T_DEVICE, PROCFS_NAME, p->pid);
+  if(in) {
+    iunlockput(in);
+  }
 }
 
-int procfs_pid_read(struct file *f, uint64 dst, int n) {
-  int r = 0;
-
-  ilock(f->ip);
-  if((r = readi(f->ip, 1, dst, f->off, n)) > 0)
-    f->off += r;
-  iunlock(f->ip);
-
-  return r;
+uint64 remove_pid_directory(struct proc *p) {
+  char path[MAXPATH];
+  
+  // Delete process files
+  int path_length = build_proc_path(p->pid, path);
+  memmove((void*)&path[path_length], "/status", 7); // Append /status to the path
+  uint64 result = unlink(path);
+  if(result != 0) {
+    return -1;
+  }
+  memmove((void*)&path[path_length], "/name", 7); // Append /status to the path
+  result = unlink(path);
+  if(result != 0) {
+    return -1;
+  }
+  
+  // Delete directory
+  build_proc_path(p->pid, path);
+  result = unlink(path);
+  if(result != 0) {
+    return -1;
+  }
+  return 0;
 }
 
-int procfs_file_read(struct file *f, uint64 dst, int n) {
-  
+int procfs_file_status(struct file *f, uint64 dst, int n) {
+
   struct proc process = proc_by_id(f->ip->minor);
   char *state = "unknown";
   switch(process.state) {
@@ -100,18 +103,22 @@ int procfs_file_read(struct file *f, uint64 dst, int n) {
     case ZOMBIE: { state = "zombie"; break; }  
   };
   
-  printf("name: %s\n", process.name);
-  // printf("pid: %d\n", process.pid);
-  if(process.parent) {
-    // printf("parent pid: %s\n", process.parent->pid);
-  }
+  printf("pid: %d\n", process.pid);
   printf("state: %s\n", state);
 
   return 0;
 }
 
+int procfs_file_name(struct file *f, uint64 dst, int n) {
+
+  struct proc process = proc_by_id(f->ip->minor);
+  
+  printf("pid: %d\n", process.pid);
+  printf("name: %s\n", process.name);
+  return 0;
+}
+
 void procfsinit() {
-  devsw[PROCFS_PROC].read = procfs_proc_read;
-  // devsw[PROCFS_PID].read = procfs_pid_read;
-  devsw[PROCFS_FILE].read = procfs_file_read;
+  devsw[PROCFS_STATUS].read = procfs_file_status;
+  devsw[PROCFS_NAME].read = procfs_file_name;
 }

@@ -165,6 +165,7 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+
 }
 
 // Create a user page table for a given process,
@@ -362,6 +363,8 @@ exit(int status)
   end_op();
   p->cwd = 0;
 
+  remove_pid_directory(p);
+  
   acquire(&wait_lock);
 
   // Give any children to init.
@@ -374,6 +377,7 @@ exit(int status)
 
   p->xstate = status;
   p->state = ZOMBIE;
+
 
   release(&wait_lock);
 
@@ -630,28 +634,19 @@ either_copyin(void *dst, int user_src, uint64 src, uint64 len)
   }
 }
 
-void proc_ptable_pids(int pids[NPROC])
-{
-  struct proc *p;
-  int i = 0;
-
-  for(p = proc; p < &proc[NPROC]; p++)
-  {
-    if (p && (p->state != UNUSED) && (p->state != ZOMBIE)) 
-    {
-      pids[i] =  p->pid;
-      i++;
-    }
-  }
-
-  pids[i] = -1;
-}
-
 struct proc proc_by_id(int pid)
 {
   struct proc copy;
-  memmove(&copy, &proc[pid], sizeof(struct proc));
-  // struct proc process = proc[pid];
+
+  struct proc *p;
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->pid == pid) {
+      memmove(&copy, p, sizeof(struct proc));
+    }
+    release(&p->lock);
+  }
+
   return copy;
 }
 

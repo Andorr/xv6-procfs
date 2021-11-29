@@ -39,6 +39,5 @@ extern struct devsw devsw[];
 
 // major device numbers
 #define CONSOLE 1
-#define PROCFS_PROC 2
-#define PROCFS_PID 3
-#define PROCFS_FILE 4
+#define PROCFS_STATUS 2
+#define PROCFS_NAME 3
